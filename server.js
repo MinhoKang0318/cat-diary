@@ -40,8 +40,8 @@ if (process.env.DATABASE_URL) {
   db = {
     async getMonth(year, month) {
       const start = `${year}-${String(month).padStart(2, '0')}-01`;
-      const end   = `${year}-${String(month).padStart(2, '0')}-31`;
-      const rows = await sql`SELECT * FROM records WHERE date >= ${start} AND date <= ${end} ORDER BY date`;
+      const nextMonth = month === 12 ? `${year + 1}-01-01` : `${year}-${String(month + 1).padStart(2, '0')}-01`;
+      const rows = await sql`SELECT * FROM records WHERE date >= ${start} AND date < ${nextMonth} ORDER BY date`;
       return rows.map(parseRow);
     },
     async getOne(date) {

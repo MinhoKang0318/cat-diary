@@ -11,31 +11,28 @@ app.use(express.static(path.join(__dirname, 'public')));
 let db;
 
 if (process.env.DATABASE_URL) {
-  // ── Production: PostgreSQL (Neon) ──────────────────────
-  const { Pool } = require('pg');
-  const pool = new Pool({
-    connectionString: process.env.DATABASE_URL,
-    ssl: { rejectUnauthorized: false }
-  });
+  // ── Production: Neon 서버리스 드라이버 (Vercel 최적화) ──
+  const { neon } = require('@neondatabase/serverless');
+  const sql = neon(process.env.DATABASE_URL);
 
-  pool.query(`
-    CREATE TABLE IF NOT EXISTS records (
-      date        DATE    PRIMARY KEY,
-      urine_times TEXT    NOT NULL DEFAULT '[]',
-      poop_times  TEXT    NOT NULL DEFAULT '[]',
-      is_hospital BOOLEAN DEFAULT FALSE,
-      notes       TEXT    DEFAULT ''
-    )
-  `).then(() => {
-    // 기존 테이블에 새 컬럼 추가 (이미 있으면 무시)
-    return pool.query(`ALTER TABLE records ADD COLUMN IF NOT EXISTS urine_times TEXT NOT NULL DEFAULT '[]'`)
-      .then(() => pool.query(`ALTER TABLE records ADD COLUMN IF NOT EXISTS poop_times TEXT NOT NULL DEFAULT '[]'`))
-      .catch(() => {});
-  }).catch(console.error);
+  const initDB = async () => {
+    await sql`
+      CREATE TABLE IF NOT EXISTS records (
+        date        DATE    PRIMARY KEY,
+        urine_times TEXT    NOT NULL DEFAULT '[]',
+        poop_times  TEXT    NOT NULL DEFAULT '[]',
+        is_hospital BOOLEAN DEFAULT FALSE,
+        notes       TEXT    DEFAULT ''
+      )
+    `;
+    await sql`ALTER TABLE records ADD COLUMN IF NOT EXISTS urine_times TEXT NOT NULL DEFAULT '[]'`.catch(() => {});
+    await sql`ALTER TABLE records ADD COLUMN IF NOT EXISTS poop_times  TEXT NOT NULL DEFAULT '[]'`.catch(() => {});
+  };
+  initDB().catch(console.error);
 
   const parseRow = r => ({
     ...r,
-    date:        r.date.toISOString().slice(0, 10),
+    date:        r.date instanceof Date ? r.date.toISOString().slice(0, 10) : String(r.date).slice(0, 10),
     urine_times: typeof r.urine_times === 'string' ? JSON.parse(r.urine_times) : (r.urine_times || []),
     poop_times:  typeof r.poop_times  === 'string' ? JSON.parse(r.poop_times)  : (r.poop_times  || [])
   });
@@ -44,29 +41,28 @@ if (process.env.DATABASE_URL) {
     async getMonth(year, month) {
       const start = `${year}-${String(month).padStart(2, '0')}-01`;
       const end   = `${year}-${String(month).padStart(2, '0')}-31`;
-      const { rows } = await pool.query(
-        'SELECT * FROM records WHERE date >= $1 AND date <= $2 ORDER BY date',
-        [start, end]
-      );
+      const rows = await sql`SELECT * FROM records WHERE date >= ${start} AND date <= ${end} ORDER BY date`;
       return rows.map(parseRow);
     },
     async getOne(date) {
-      const { rows } = await pool.query('SELECT * FROM records WHERE date = $1', [date]);
+      const rows = await sql`SELECT * FROM records WHERE date = ${date}`;
       return rows.length ? parseRow(rows[0]) : null;
     },
     async upsert(date, { urine_times, poop_times, is_hospital, notes }) {
-      await pool.query(`
+      const ut = JSON.stringify(urine_times);
+      const pt = JSON.stringify(poop_times);
+      await sql`
         INSERT INTO records (date, urine_times, poop_times, is_hospital, notes)
-        VALUES ($1, $2, $3, $4, $5)
+        VALUES (${date}, ${ut}, ${pt}, ${is_hospital}, ${notes})
         ON CONFLICT (date) DO UPDATE SET
           urine_times = EXCLUDED.urine_times,
           poop_times  = EXCLUDED.poop_times,
           is_hospital = EXCLUDED.is_hospital,
           notes       = EXCLUDED.notes
-      `, [date, JSON.stringify(urine_times), JSON.stringify(poop_times), is_hospital, notes]);
+      `;
     },
     async remove(date) {
-      await pool.query('DELETE FROM records WHERE date = $1', [date]);
+      await sql`DELETE FROM records WHERE date = ${date}`;
     }
   };
 

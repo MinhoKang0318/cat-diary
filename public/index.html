@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>🐱 고양이 건강 다이어리</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <header>
+    <h1>🐱 고양이 건강 다이어리</h1>
+  </header>
+
+  <main>
+    <!-- 달력 영역 -->
+    <section class="calendar-section">
+      <div class="calendar-nav">
+        <button id="btn-prev" aria-label="이전 달">&#8249;</button>
+        <h2 id="current-month"></h2>
+        <button id="btn-next" aria-label="다음 달">&#8250;</button>
+      </div>
+
+      <div class="calendar-grid">
+        <div class="day-header sun">일</div>
+        <div class="day-header">월</div>
+        <div class="day-header">화</div>
+        <div class="day-header">수</div>
+        <div class="day-header">목</div>
+        <div class="day-header">금</div>
+        <div class="day-header sat">토</div>
+      </div>
+      <div class="calendar-days" id="calendar-days"></div>
+
+      <div class="legend">
+        <span class="legend-item"><span class="dot hospital"></span>병원일</span>
+        <span class="legend-item"><span class="dot has-record"></span>기록 있음</span>
+        <span class="legend-item"><span class="dot today"></span>오늘</span>
+      </div>
+    </section>
+
+    <!-- 날짜 상세 패널 -->
+    <section class="detail-section" id="detail-section">
+      <div class="detail-placeholder" id="detail-placeholder">
+        <p>📅 날짜를 클릭하면<br>기록을 입력할 수 있어요</p>
+      </div>
+
+      <div class="detail-content" id="detail-content">
+        <div class="detail-header">
+          <h3 id="detail-date-title"></h3>
+          <button class="btn-close" id="btn-close" aria-label="닫기">✕</button>
+        </div>
+
+        <!-- 오줌 / 똥 카운트 -->
+        <div class="count-row">
+          <div class="count-card">
+            <div class="count-label">💧 오줌</div>
+            <div class="count-controls">
+              <button class="btn-count minus" data-type="urine">−</button>
+              <span class="count-value" id="urine-val">0</span>
+              <button class="btn-count plus" data-type="urine">+</button>
+            </div>
+            <div class="times-list" id="urine-times"></div>
+          </div>
+          <div class="count-card">
+            <div class="count-label">💩 똥</div>
+            <div class="count-controls">
+              <button class="btn-count minus" data-type="poop">−</button>
+              <span class="count-value" id="poop-val">0</span>
+              <button class="btn-count plus" data-type="poop">+</button>
+            </div>
+            <div class="times-list" id="poop-times"></div>
+          </div>
+        </div>
+
+        <!-- 병원 방문일 -->
+        <label class="hospital-toggle">
+          <input type="checkbox" id="hospital-check" />
+          <span class="toggle-track"></span>
+          <span class="toggle-label">🏥 병원 방문일로 표시</span>
+        </label>
+
+        <!-- 이슈 / 메모 -->
+        <div class="notes-section">
+          <div class="notes-label">📝 이슈 / 메모</div>
+          <div class="quick-tags">
+            <button class="tag-btn" data-tag="구토">구토</button>
+            <button class="tag-btn" data-tag="약 복용">약 복용</button>
+            <button class="tag-btn" data-tag="식욕 저하">식욕 저하</button>
+            <button class="tag-btn" data-tag="활동량 감소">활동량 감소</button>
+            <button class="tag-btn" data-tag="털 뭉치 토출">털 뭉치 토출</button>
+            <button class="tag-btn" data-tag="물 많이 마심">물 많이 마심</button>
+          </div>
+          <textarea id="notes-input" placeholder="이슈나 메모를 자유롭게 입력하세요..."></textarea>
+        </div>
+
+        <div class="detail-actions">
+          <button class="btn-save" id="btn-save">저장</button>
+          <span class="save-status" id="save-status"></span>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- 모바일용 오버레이 -->
+  <div class="overlay" id="overlay"></div>
+
+  <script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,40 @@
+⏺ 코드는 이미 배포 준비가 되어 있습니다. GitHub → Neon → Vercel 순서로 진행하면 됩니다.
+
+  ---
+  1단계: GitHub 저장소 생성
+
+  github.com 에서 로그인 후 New repository 클릭 → 이름 입력 (예: cat-diary) → Create
+
+  그다음 터미널에서:
+
+  cd /Users/kangminho/ClaudeProject/Kona
+  git init
+  git add .
+  git commit -m "고양이 건강 다이어리"
+  git remote add origin https://github.com/본인아이디/cat-diary.git
+  git push -u origin main
+
+  ---
+  2단계: Neon 데이터베이스 생성
+
+  1. neon.tech 접속 → Sign up (GitHub 계정 사용 가능)
+  2. New Project 클릭
+    - Name: cat-diary (아무거나)
+    - Region: Asia Pacific (Singapore)
+  3. 생성 후 나오는 화면에서 Connection string 복사
+    - postgresql://... 형태의 긴 문자열
+
+  ---
+  3단계: Vercel 배포
+
+  1. vercel.com 접속 → Continue with GitHub으로 가입
+  2. Add New Project → 방금 만든 cat-diary 저장소 선택 → Import
+  3. Environment Variables 섹션에서:
+    - NAME: DATABASE_URL
+    - VALUE: (2단계에서 복사한 Neon connection string)
+  4. Deploy 클릭
+
+  2분 정도 후 https://cat-diary-xxx.vercel.app 형태의 URL이 발급됩니다.
+
+  ---
+  진행하다가 막히는 부분 있으면 알려주세요.

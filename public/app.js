@@ -1,21 +1,33 @@
 const state = {
   year:         new Date().getFullYear(),
   month:        new Date().getMonth() + 1,
-  monthRecords: {},      // { 'YYYY-MM-DD': record }
+  monthRecords: {},
   selectedDate: null,
   record: { urine_times: [], poop_times: [], is_hospital: false, notes: '' }
 };
 
+// ── 월별 클라이언트 캐시 ───────────────────────────────────
+const monthCache = {};  // { 'YYYY-M': monthRecords 객체 }
+
 const today = new Date().toISOString().slice(0, 10);
 
-// ── 달력 로드 ──────────────────────────────────────────────
+// ── 달력 로드 (캐시 우선) ─────────────────────────────────
 async function loadMonth() {
+  const cacheKey = `${state.year}-${state.month}`;
+
+  if (monthCache[cacheKey]) {
+    state.monthRecords = monthCache[cacheKey];
+    renderCalendar();
+    return;
+  }
+
   try {
     const res = await fetch(`/api/records/${state.year}/${state.month}`);
     if (!res.ok) throw new Error(`API 오류: ${res.status} ${await res.text()}`);
     const records = await res.json();
     state.monthRecords = {};
     records.forEach(r => { state.monthRecords[r.date] = r; });
+    monthCache[cacheKey] = state.monthRecords;
   } catch (e) {
     console.error('달력 데이터 로드 실패:', e);
   }
@@ -54,7 +66,7 @@ function buildDayCell(d, dateStr) {
   const uCount = r?.urine_times?.length || 0;
   const pCount = r?.poop_times?.length  || 0;
 
-  if (r?.is_hospital)                                        cell.classList.add('hospital-day');
+  if (r?.is_hospital)                                            cell.classList.add('hospital-day');
   else if (r && (uCount > 0 || pCount > 0 || r.notes?.trim())) cell.classList.add('has-record');
   if (dateStr === today)              cell.classList.add('today');
   if (dateStr === state.selectedDate) cell.classList.add('selected');
@@ -75,8 +87,8 @@ function buildDayCell(d, dateStr) {
   return cell;
 }
 
-// ── 날짜 선택 ──────────────────────────────────────────────
-async function selectDay(dateStr) {
+// ── 날짜 선택 (API 호출 없이 캐시 사용) ───────────────────
+function selectDay(dateStr) {
   state.selectedDate = dateStr;
 
   document.querySelectorAll('.day-cell.selected')
@@ -84,13 +96,13 @@ async function selectDay(dateStr) {
   const cell = document.querySelector(`.day-cell[data-date="${dateStr}"]`);
   if (cell) cell.classList.add('selected');
 
-  const res = await fetch(`/api/records/${dateStr}`);
-  const data = await res.json();
+  // 이미 로드된 월 데이터 사용 — API 호출 없음
+  const cached = state.monthRecords[dateStr];
   state.record = {
-    urine_times: data.urine_times || [],
-    poop_times:  data.poop_times  || [],
-    is_hospital: !!data.is_hospital,
-    notes:       data.notes || ''
+    urine_times: cached?.urine_times ? [...cached.urine_times] : [],
+    poop_times:  cached?.poop_times  ? [...cached.poop_times]  : [],
+    is_hospital: !!cached?.is_hospital,
+    notes:       cached?.notes || ''
   };
 
   renderDetail();
@@ -153,8 +165,8 @@ function closePanel() {
   }
 }
 
-// ── 저장 ──────────────────────────────────────────────────
-async function saveRecord() {
+// ── 저장 (낙관적 업데이트 — UI 먼저, 저장은 백그라운드) ──
+function saveRecord() {
   const payload = {
     urine_times: state.record.urine_times,
     poop_times:  state.record.poop_times,
@@ -162,27 +174,31 @@ async function saveRecord() {
     notes:       document.getElementById('notes-input').value.trim()
   };
 
-  const statusEl = document.getElementById('save-status');
-  statusEl.textContent = '저장 중...';
-
-  await fetch(`/api/records/${state.selectedDate}`, {
-    method:  'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body:    JSON.stringify(payload)
-  });
-
+  // 즉시 UI 업데이트
   state.record.is_hospital = payload.is_hospital;
   state.record.notes       = payload.notes;
   state.monthRecords[state.selectedDate] = { ...state.record, date: state.selectedDate };
   renderCalendar();
+
+  const statusEl = document.getElementById('save-status');
   statusEl.textContent = '✓ 저장됨';
   setTimeout(() => { statusEl.textContent = ''; }, 2000);
+
+  // 백그라운드에서 서버에 저장
+  fetch(`/api/records/${state.selectedDate}`, {
+    method:  'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body:    JSON.stringify(payload)
+  }).catch(e => {
+    console.error('저장 실패:', e);
+    statusEl.textContent = '⚠️ 저장 실패';
+  });
 }
 
 // ── 카운트 버튼 ────────────────────────────────────────────
 document.querySelectorAll('.btn-count').forEach(btn => {
   btn.addEventListener('click', () => {
-    const type  = btn.dataset.type;          // 'urine' | 'poop'
+    const type  = btn.dataset.type;
     const key   = `${type}_times`;
     const valEl = document.getElementById(`${type}-val`);
 

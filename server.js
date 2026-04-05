@@ -25,8 +25,6 @@ if (process.env.DATABASE_URL) {
         notes       TEXT    DEFAULT ''
       )
     `;
-    await sql`ALTER TABLE records ADD COLUMN IF NOT EXISTS urine_times TEXT NOT NULL DEFAULT '[]'`.catch(() => {});
-    await sql`ALTER TABLE records ADD COLUMN IF NOT EXISTS poop_times  TEXT NOT NULL DEFAULT '[]'`.catch(() => {});
   };
   initDB().catch(console.error);
 

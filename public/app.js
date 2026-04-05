@@ -3,7 +3,7 @@ const state = {
   month:        new Date().getMonth() + 1,
   monthRecords: {},
   selectedDate: null,
-  record: { urine_times: [], poop_times: [], is_hospital: false, notes: '' }
+  record: { urine_times: [], poop_times: [], is_hospital: false, is_litter_change: false, notes: '' }
 };
 
 // ── 월별 클라이언트 캐시 ───────────────────────────────────
@@ -63,11 +63,14 @@ function buildDayCell(d, dateStr) {
   cell.className = 'day-cell';
   cell.dataset.date = dateStr;
 
-  const uCount = r?.urine_times?.length || 0;
-  const pCount = r?.poop_times?.length  || 0;
+  const uCount   = r?.urine_times?.length || 0;
+  const pCount   = r?.poop_times?.length  || 0;
+  const hasNotes = !!r?.notes?.trim();
 
-  if (r?.is_hospital)                                            cell.classList.add('hospital-day');
-  else if (r && (uCount > 0 || pCount > 0 || r.notes?.trim())) cell.classList.add('has-record');
+  if (r?.is_hospital)                        cell.classList.add('hospital-day');
+  else if (r?.is_litter_change)              cell.classList.add('litter-day');
+  else if (hasNotes)                         cell.classList.add('has-notes');
+  else if (r && (uCount > 0 || pCount > 0)) cell.classList.add('has-record');
   if (dateStr === today)              cell.classList.add('today');
   if (dateStr === state.selectedDate) cell.classList.add('selected');
 
@@ -78,9 +81,11 @@ function buildDayCell(d, dateStr) {
 
   const inds = document.createElement('div');
   inds.className = 'day-indicators';
-  if (r?.is_hospital) inds.innerHTML += `<span class="ind-hospital">🏥</span>`;
-  if (uCount > 0)     inds.innerHTML += `<span class="ind-count">💧${uCount}</span>`;
-  if (pCount > 0)     inds.innerHTML += `<span class="ind-count">💩${pCount}</span>`;
+  if (r?.is_hospital)      inds.innerHTML += `<span class="ind-hospital">🏥</span>`;
+  if (r?.is_litter_change) inds.innerHTML += `<span class="ind-litter">🧹</span>`;
+  if (uCount > 0)          inds.innerHTML += `<span class="ind-count">💧${uCount}</span>`;
+  if (pCount > 0)          inds.innerHTML += `<span class="ind-count">💩${pCount}</span>`;
+  if (hasNotes)            inds.innerHTML += `<span class="ind-notes">📝</span>`;
   cell.appendChild(inds);
 
   cell.addEventListener('click', () => selectDay(dateStr));
@@ -99,10 +104,11 @@ function selectDay(dateStr) {
   // 이미 로드된 월 데이터 사용 — API 호출 없음
   const cached = state.monthRecords[dateStr];
   state.record = {
-    urine_times: cached?.urine_times ? [...cached.urine_times] : [],
-    poop_times:  cached?.poop_times  ? [...cached.poop_times]  : [],
-    is_hospital: !!cached?.is_hospital,
-    notes:       cached?.notes || ''
+    urine_times:      cached?.urine_times ? [...cached.urine_times] : [],
+    poop_times:       cached?.poop_times  ? [...cached.poop_times]  : [],
+    is_hospital:      !!cached?.is_hospital,
+    is_litter_change: !!cached?.is_litter_change,
+    notes:            cached?.notes || ''
   };
 
   renderDetail();
@@ -120,8 +126,9 @@ function renderDetail() {
   document.getElementById('detail-date-title').textContent = label;
   document.getElementById('urine-val').textContent = r.urine_times.length;
   document.getElementById('poop-val').textContent  = r.poop_times.length;
-  document.getElementById('hospital-check').checked = r.is_hospital;
-  document.getElementById('notes-input').value      = r.notes;
+  document.getElementById('hospital-check').checked      = r.is_hospital;
+  document.getElementById('litter-change-check').checked = r.is_litter_change;
+  document.getElementById('notes-input').value           = r.notes;
   document.getElementById('save-status').textContent = '';
 
   renderTimes('urine');
@@ -168,15 +175,17 @@ function closePanel() {
 // ── 저장 (낙관적 업데이트 — UI 먼저, 저장은 백그라운드) ──
 function saveRecord() {
   const payload = {
-    urine_times: state.record.urine_times,
-    poop_times:  state.record.poop_times,
-    is_hospital: document.getElementById('hospital-check').checked,
-    notes:       document.getElementById('notes-input').value.trim()
+    urine_times:      state.record.urine_times,
+    poop_times:       state.record.poop_times,
+    is_hospital:      document.getElementById('hospital-check').checked,
+    is_litter_change: document.getElementById('litter-change-check').checked,
+    notes:            document.getElementById('notes-input').value.trim()
   };
 
   // 즉시 UI 업데이트
-  state.record.is_hospital = payload.is_hospital;
-  state.record.notes       = payload.notes;
+  state.record.is_hospital      = payload.is_hospital;
+  state.record.is_litter_change = payload.is_litter_change;
+  state.record.notes            = payload.notes;
   state.monthRecords[state.selectedDate] = { ...state.record, date: state.selectedDate };
   renderCalendar();
 

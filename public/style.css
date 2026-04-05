@@ -6,6 +6,10 @@
   --primary-soft: #FFE0C8;
   --hospital:     #FF6B6B;
   --hospital-bg:  #FFF0F0;
+  --litter:       #9B8FD4;
+  --litter-bg:    #F0EDFA;
+  --notes-color:  #E8A020;
+  --notes-bg:     #FFF8EC;
   --record:       #6BCB77;
   --record-bg:    #F0FBF1;
   --today-ring:   #4ECDC4;
@@ -117,7 +121,9 @@ main {
 .day-cell.selected { border-color: var(--primary); box-shadow: 0 0 0 2px var(--primary-soft); }
 .day-cell.today { border-color: var(--today-ring); box-shadow: 0 0 0 2px rgba(78,205,196,0.25); }
 .day-cell.hospital-day { background: var(--hospital-bg); border-color: var(--hospital); }
-.day-cell.has-record { background: var(--record-bg); border-color: var(--record); }
+.day-cell.litter-day  { background: var(--litter-bg);   border-color: var(--litter); }
+.day-cell.has-notes   { background: var(--notes-bg);    border-color: var(--notes-color); }
+.day-cell.has-record  { background: var(--record-bg);   border-color: var(--record); }
 .day-cell.empty { background: transparent; border-color: transparent; cursor: default; }
 .day-cell.empty:hover { transform: none; }
 
@@ -150,6 +156,8 @@ main {
   flex: 1;
 }
 .ind-hospital { font-size: 0.85rem; }
+.ind-litter   { font-size: 0.85rem; }
+.ind-notes    { font-size: 0.75rem; }
 .ind-count {
   font-size: 0.7rem;
   color: var(--text-sub);
@@ -167,9 +175,11 @@ main {
 }
 .legend-item { display: flex; align-items: center; gap: 6px; font-size: 0.75rem; color: var(--text-sub); }
 .dot { width: 12px; height: 12px; border-radius: 4px; border: 1.5px solid; }
-.dot.hospital  { background: var(--hospital-bg); border-color: var(--hospital); }
-.dot.has-record { background: var(--record-bg); border-color: var(--record); }
-.dot.today     { background: white; border-color: var(--today-ring); box-shadow: 0 0 0 2px rgba(78,205,196,0.25); }
+.dot.hospital   { background: var(--hospital-bg); border-color: var(--hospital); }
+.dot.litter     { background: var(--litter-bg);   border-color: var(--litter); }
+.dot.has-notes  { background: var(--notes-bg);    border-color: var(--notes-color); }
+.dot.has-record { background: var(--record-bg);   border-color: var(--record); }
+.dot.today      { background: white; border-color: var(--today-ring); box-shadow: 0 0 0 2px rgba(78,205,196,0.25); }
 
 /* ── 상세 패널 ── */
 .detail-section {
@@ -294,6 +304,40 @@ main {
 }
 .hospital-toggle input:checked + .toggle-track { background: var(--hospital); }
 .hospital-toggle input:checked + .toggle-track::after { left: 20px; }
+
+.litter-toggle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px;
+  background: var(--bg);
+  border-radius: 10px;
+  cursor: pointer;
+  margin-bottom: 16px;
+  user-select: none;
+}
+.litter-toggle input { display: none; }
+.litter-toggle .toggle-track {
+  width: 40px; height: 22px;
+  border-radius: 11px;
+  background: var(--border);
+  position: relative;
+  flex-shrink: 0;
+  transition: background 0.2s;
+}
+.litter-toggle .toggle-track::after {
+  content: '';
+  position: absolute;
+  width: 18px; height: 18px;
+  border-radius: 50%;
+  background: white;
+  top: 2px; left: 2px;
+  transition: left 0.2s;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+}
+.litter-toggle input:checked + .toggle-track { background: var(--litter); }
+.litter-toggle input:checked + .toggle-track::after { left: 20px; }
+.litter-toggle .toggle-label { font-size: 0.9rem; font-weight: 600; }
 .toggle-label { font-size: 0.9rem; font-weight: 600; }
 
 /* 메모 영역 */

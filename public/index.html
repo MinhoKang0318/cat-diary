@@ -35,6 +35,8 @@
 
       <div class="legend">
         <span class="legend-item"><span class="dot hospital"></span>병원일</span>
+        <span class="legend-item"><span class="dot litter"></span>모래 갈이</span>
+        <span class="legend-item"><span class="dot has-notes"></span>메모 있음</span>
         <span class="legend-item"><span class="dot has-record"></span>기록 있음</span>
         <span class="legend-item"><span class="dot today"></span>오늘</span>
       </div>
@@ -79,6 +81,13 @@
           <input type="checkbox" id="hospital-check" />
           <span class="toggle-track"></span>
           <span class="toggle-label">🏥 병원 방문일로 표시</span>
+        </label>
+
+        <!-- 모래 전체 갈이 -->
+        <label class="litter-toggle">
+          <input type="checkbox" id="litter-change-check" />
+          <span class="toggle-track"></span>
+          <span class="toggle-label">🧹 모래 전체 갈이</span>
         </label>
 
         <!-- 이슈 / 메모 -->

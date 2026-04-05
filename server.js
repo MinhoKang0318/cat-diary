@@ -18,21 +18,25 @@ if (process.env.DATABASE_URL) {
   const initDB = async () => {
     await sql`
       CREATE TABLE IF NOT EXISTS records (
-        date        DATE    PRIMARY KEY,
-        urine_times TEXT    NOT NULL DEFAULT '[]',
-        poop_times  TEXT    NOT NULL DEFAULT '[]',
-        is_hospital BOOLEAN DEFAULT FALSE,
-        notes       TEXT    DEFAULT ''
+        date             DATE    PRIMARY KEY,
+        urine_times      TEXT    NOT NULL DEFAULT '[]',
+        poop_times       TEXT    NOT NULL DEFAULT '[]',
+        is_hospital      BOOLEAN DEFAULT FALSE,
+        is_litter_change BOOLEAN DEFAULT FALSE,
+        notes            TEXT    DEFAULT ''
       )
     `;
+    // 기존 테이블에 컬럼 추가 (없으면)
+    await sql`ALTER TABLE records ADD COLUMN IF NOT EXISTS is_litter_change BOOLEAN DEFAULT FALSE`;
   };
   initDB().catch(console.error);
 
   const parseRow = r => ({
     ...r,
-    date:        r.date instanceof Date ? r.date.toISOString().slice(0, 10) : String(r.date).slice(0, 10),
-    urine_times: typeof r.urine_times === 'string' ? JSON.parse(r.urine_times) : (r.urine_times || []),
-    poop_times:  typeof r.poop_times  === 'string' ? JSON.parse(r.poop_times)  : (r.poop_times  || [])
+    date:             r.date instanceof Date ? r.date.toISOString().slice(0, 10) : String(r.date).slice(0, 10),
+    urine_times:      typeof r.urine_times === 'string' ? JSON.parse(r.urine_times) : (r.urine_times || []),
+    poop_times:       typeof r.poop_times  === 'string' ? JSON.parse(r.poop_times)  : (r.poop_times  || []),
+    is_litter_change: !!r.is_litter_change
   });
 
   db = {
@@ -47,17 +51,18 @@ if (process.env.DATABASE_URL) {
       const rows = await sql`SELECT * FROM records WHERE date = ${date}`;
       return rows.length ? parseRow(rows[0]) : null;
     },
-    async upsert(date, { urine_times, poop_times, is_hospital, notes }) {
+    async upsert(date, { urine_times, poop_times, is_hospital, is_litter_change, notes }) {
       const ut = JSON.stringify(urine_times);
       const pt = JSON.stringify(poop_times);
       await sql`
-        INSERT INTO records (date, urine_times, poop_times, is_hospital, notes)
-        VALUES (${date}, ${ut}, ${pt}, ${is_hospital}, ${notes})
+        INSERT INTO records (date, urine_times, poop_times, is_hospital, is_litter_change, notes)
+        VALUES (${date}, ${ut}, ${pt}, ${is_hospital}, ${is_litter_change}, ${notes})
         ON CONFLICT (date) DO UPDATE SET
-          urine_times = EXCLUDED.urine_times,
-          poop_times  = EXCLUDED.poop_times,
-          is_hospital = EXCLUDED.is_hospital,
-          notes       = EXCLUDED.notes
+          urine_times      = EXCLUDED.urine_times,
+          poop_times       = EXCLUDED.poop_times,
+          is_hospital      = EXCLUDED.is_hospital,
+          is_litter_change = EXCLUDED.is_litter_change,
+          notes            = EXCLUDED.notes
       `;
     },
     async remove(date) {
@@ -74,21 +79,24 @@ if (process.env.DATABASE_URL) {
   const sqlite = new DatabaseSync(path.join(dataDir, 'cat_health.db'));
   sqlite.exec(`
     CREATE TABLE IF NOT EXISTS records (
-      date        TEXT PRIMARY KEY,
-      urine_times TEXT NOT NULL DEFAULT '[]',
-      poop_times  TEXT NOT NULL DEFAULT '[]',
-      is_hospital INTEGER DEFAULT 0,
-      notes       TEXT DEFAULT ''
+      date             TEXT PRIMARY KEY,
+      urine_times      TEXT NOT NULL DEFAULT '[]',
+      poop_times       TEXT NOT NULL DEFAULT '[]',
+      is_hospital      INTEGER DEFAULT 0,
+      is_litter_change INTEGER DEFAULT 0,
+      notes            TEXT DEFAULT ''
     )
   `);
   // 기존 테이블에 새 컬럼 추가 (이미 있으면 무시)
-  try { sqlite.exec("ALTER TABLE records ADD COLUMN urine_times TEXT NOT NULL DEFAULT '[]'"); } catch(e) {}
-  try { sqlite.exec("ALTER TABLE records ADD COLUMN poop_times  TEXT NOT NULL DEFAULT '[]'"); } catch(e) {}
+  try { sqlite.exec("ALTER TABLE records ADD COLUMN urine_times      TEXT NOT NULL DEFAULT '[]'"); } catch(e) {}
+  try { sqlite.exec("ALTER TABLE records ADD COLUMN poop_times       TEXT NOT NULL DEFAULT '[]'"); } catch(e) {}
+  try { sqlite.exec("ALTER TABLE records ADD COLUMN is_litter_change INTEGER DEFAULT 0");          } catch(e) {}
 
   const parseRow = r => ({
     ...r,
-    urine_times: JSON.parse(r.urine_times || '[]'),
-    poop_times:  JSON.parse(r.poop_times  || '[]')
+    urine_times:      JSON.parse(r.urine_times || '[]'),
+    poop_times:       JSON.parse(r.poop_times  || '[]'),
+    is_litter_change: !!r.is_litter_change
   });
 
   db = {
@@ -100,16 +108,17 @@ if (process.env.DATABASE_URL) {
       const row = sqlite.prepare('SELECT * FROM records WHERE date = ?').get(date);
       return row ? parseRow(row) : null;
     },
-    async upsert(date, { urine_times, poop_times, is_hospital, notes }) {
+    async upsert(date, { urine_times, poop_times, is_hospital, is_litter_change, notes }) {
       sqlite.prepare(`
-        INSERT INTO records (date, urine_times, poop_times, is_hospital, notes)
-        VALUES (?, ?, ?, ?, ?)
+        INSERT INTO records (date, urine_times, poop_times, is_hospital, is_litter_change, notes)
+        VALUES (?, ?, ?, ?, ?, ?)
         ON CONFLICT(date) DO UPDATE SET
-          urine_times = excluded.urine_times,
-          poop_times  = excluded.poop_times,
-          is_hospital = excluded.is_hospital,
-          notes       = excluded.notes
-      `).run(date, JSON.stringify(urine_times), JSON.stringify(poop_times), is_hospital ? 1 : 0, notes);
+          urine_times      = excluded.urine_times,
+          poop_times       = excluded.poop_times,
+          is_hospital      = excluded.is_hospital,
+          is_litter_change = excluded.is_litter_change,
+          notes            = excluded.notes
+      `).run(date, JSON.stringify(urine_times), JSON.stringify(poop_times), is_hospital ? 1 : 0, is_litter_change ? 1 : 0, notes);
     },
     async remove(date) {
       sqlite.prepare('DELETE FROM records WHERE date = ?').run(date);
@@ -143,8 +152,8 @@ app.get('/api/records/:date', async (req, res) => {
 
 app.post('/api/records/:date', async (req, res) => {
   try {
-    const { urine_times = [], poop_times = [], is_hospital = false, notes = '' } = req.body;
-    await db.upsert(req.params.date, { urine_times, poop_times, is_hospital, notes });
+    const { urine_times = [], poop_times = [], is_hospital = false, is_litter_change = false, notes = '' } = req.body;
+    await db.upsert(req.params.date, { urine_times, poop_times, is_hospital, is_litter_change, notes });
     res.json({ success: true });
   } catch (e) {
     console.error(e);

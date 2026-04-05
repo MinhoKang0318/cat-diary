@@ -10,10 +10,15 @@ const today = new Date().toISOString().slice(0, 10);
 
 // ── 달력 로드 ──────────────────────────────────────────────
 async function loadMonth() {
-  const res = await fetch(`/api/records/${state.year}/${state.month}`);
-  const records = await res.json();
-  state.monthRecords = {};
-  records.forEach(r => { state.monthRecords[r.date] = r; });
+  try {
+    const res = await fetch(`/api/records/${state.year}/${state.month}`);
+    if (!res.ok) throw new Error(`API 오류: ${res.status} ${await res.text()}`);
+    const records = await res.json();
+    state.monthRecords = {};
+    records.forEach(r => { state.monthRecords[r.date] = r; });
+  } catch (e) {
+    console.error('달력 데이터 로드 실패:', e);
+  }
   renderCalendar();
 }
 

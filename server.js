@@ -127,24 +127,44 @@ if (process.env.DATABASE_URL) {
 // ── API 라우트 ─────────────────────────────────────────────
 
 app.get('/api/records/:year/:month', async (req, res) => {
-  const records = await db.getMonth(req.params.year, req.params.month);
-  res.json(records);
+  try {
+    const records = await db.getMonth(req.params.year, req.params.month);
+    res.json(records);
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: e.message });
+  }
 });
 
 app.get('/api/records/:date', async (req, res) => {
-  const record = await db.getOne(req.params.date);
-  res.json(record || { date: req.params.date, urine_times: [], poop_times: [], is_hospital: false, notes: '' });
+  try {
+    const record = await db.getOne(req.params.date);
+    res.json(record || { date: req.params.date, urine_times: [], poop_times: [], is_hospital: false, notes: '' });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: e.message });
+  }
 });
 
 app.post('/api/records/:date', async (req, res) => {
-  const { urine_times = [], poop_times = [], is_hospital = false, notes = '' } = req.body;
-  await db.upsert(req.params.date, { urine_times, poop_times, is_hospital, notes });
-  res.json({ success: true });
+  try {
+    const { urine_times = [], poop_times = [], is_hospital = false, notes = '' } = req.body;
+    await db.upsert(req.params.date, { urine_times, poop_times, is_hospital, notes });
+    res.json({ success: true });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: e.message });
+  }
 });
 
 app.delete('/api/records/:date', async (req, res) => {
-  await db.remove(req.params.date);
-  res.json({ success: true });
+  try {
+    await db.remove(req.params.date);
+    res.json({ success: true });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: e.message });
+  }
 });
 
 // ── Vercel 서버리스 export / 로컬 서버 실행 ───────────────

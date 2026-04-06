@@ -3,7 +3,7 @@ const state = {
   month:        new Date().getMonth() + 1,
   monthRecords: {},
   selectedDate: null,
-  record: { urine_times: [], poop_times: [], is_hospital: false, is_litter_change: false, notes: '' }
+  record: { urine_times: [], poop_times: [], is_hospital: false, is_litter_change: false, is_ear_clean: false, is_teeth_brush: false, weight: null, notes: '' }
 };
 
 // ── 월별 클라이언트 캐시 ───────────────────────────────────
@@ -69,6 +69,8 @@ function buildDayCell(d, dateStr) {
 
   if (r?.is_hospital)                        cell.classList.add('hospital-day');
   else if (r?.is_litter_change)              cell.classList.add('litter-day');
+  else if (r?.is_ear_clean)                  cell.classList.add('ear-clean-day');
+  else if (r?.is_teeth_brush)               cell.classList.add('teeth-brush-day');
   else if (hasNotes)                         cell.classList.add('has-notes');
   else if (r && (uCount > 0 || pCount > 0)) cell.classList.add('has-record');
   if (dateStr === today)              cell.classList.add('today');
@@ -83,6 +85,8 @@ function buildDayCell(d, dateStr) {
   inds.className = 'day-indicators';
   if (r?.is_hospital)      inds.innerHTML += `<span class="ind-hospital">🏥</span>`;
   if (r?.is_litter_change) inds.innerHTML += `<span class="ind-litter">🧹</span>`;
+  if (r?.is_ear_clean)     inds.innerHTML += `<span class="ind-ear">👂</span>`;
+  if (r?.is_teeth_brush)   inds.innerHTML += `<span class="ind-teeth">🪥</span>`;
   if (uCount > 0)          inds.innerHTML += `<span class="ind-count">💧${uCount}</span>`;
   if (pCount > 0)          inds.innerHTML += `<span class="ind-count">💩${pCount}</span>`;
   if (hasNotes)            inds.innerHTML += `<span class="ind-notes">📝</span>`;
@@ -108,6 +112,9 @@ function selectDay(dateStr) {
     poop_times:       cached?.poop_times  ? [...cached.poop_times]  : [],
     is_hospital:      !!cached?.is_hospital,
     is_litter_change: !!cached?.is_litter_change,
+    is_ear_clean:     !!cached?.is_ear_clean,
+    is_teeth_brush:   !!cached?.is_teeth_brush,
+    weight:           cached?.weight ?? null,
     notes:            cached?.notes || ''
   };
 
@@ -128,6 +135,11 @@ function renderDetail() {
   document.getElementById('poop-val').textContent  = r.poop_times.length;
   document.getElementById('hospital-check').checked      = r.is_hospital;
   document.getElementById('litter-change-check').checked = r.is_litter_change;
+  document.getElementById('ear-clean-check').checked     = r.is_ear_clean;
+  document.getElementById('teeth-brush-check').checked   = r.is_teeth_brush;
+  const weightInput = document.getElementById('weight-input');
+  weightInput.value = r.weight != null ? String(r.weight) : '';
+  updateWeightDisplay(r.weight);
   document.getElementById('notes-input').value           = r.notes;
   document.getElementById('save-status').textContent = '';
 
@@ -179,12 +191,18 @@ function saveRecord() {
     poop_times:       state.record.poop_times,
     is_hospital:      document.getElementById('hospital-check').checked,
     is_litter_change: document.getElementById('litter-change-check').checked,
+    is_ear_clean:     document.getElementById('ear-clean-check').checked,
+    is_teeth_brush:   document.getElementById('teeth-brush-check').checked,
+    weight:           parseWeightInput(document.getElementById('weight-input').value),
     notes:            document.getElementById('notes-input').value.trim()
   };
 
   // 즉시 UI 업데이트
   state.record.is_hospital      = payload.is_hospital;
   state.record.is_litter_change = payload.is_litter_change;
+  state.record.is_ear_clean     = payload.is_ear_clean;
+  state.record.is_teeth_brush   = payload.is_teeth_brush;
+  state.record.weight           = payload.weight;
   state.record.notes            = payload.notes;
   state.monthRecords[state.selectedDate] = { ...state.record, date: state.selectedDate };
   renderCalendar();
@@ -252,6 +270,29 @@ document.getElementById('btn-next').addEventListener('click', () => {
 document.getElementById('btn-save').addEventListener('click', saveRecord);
 document.getElementById('btn-close').addEventListener('click', closePanel);
 document.getElementById('overlay').addEventListener('click', closePanel);
+
+// ── 체중 유틸 ─────────────────────────────────────────────
+function parseWeightInput(raw) {
+  const digits = raw.replace(/\D/g, '');
+  if (!digits) return null;
+  return Number(digits);
+}
+
+function updateWeightDisplay(rawVal) {
+  const el = document.getElementById('weight-display');
+  if (rawVal == null || rawVal === '') {
+    el.textContent = '— kg';
+    el.classList.remove('has-weight');
+  } else {
+    el.textContent = (Number(rawVal) / 10).toFixed(1) + ' kg';
+    el.classList.add('has-weight');
+  }
+}
+
+document.getElementById('weight-input').addEventListener('input', e => {
+  e.target.value = e.target.value.replace(/\D/g, '');
+  updateWeightDisplay(parseWeightInput(e.target.value));
+});
 
 // ── 유틸 ──────────────────────────────────────────────────
 function formatDate(y, m, d) {

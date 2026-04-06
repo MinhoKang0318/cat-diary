@@ -23,11 +23,17 @@ if (process.env.DATABASE_URL) {
         poop_times       TEXT    NOT NULL DEFAULT '[]',
         is_hospital      BOOLEAN DEFAULT FALSE,
         is_litter_change BOOLEAN DEFAULT FALSE,
+        is_ear_clean     BOOLEAN DEFAULT FALSE,
+        is_teeth_brush   BOOLEAN DEFAULT FALSE,
+        weight           INTEGER DEFAULT NULL,
         notes            TEXT    DEFAULT ''
       )
     `;
     // 기존 테이블에 컬럼 추가 (없으면)
     await sql`ALTER TABLE records ADD COLUMN IF NOT EXISTS is_litter_change BOOLEAN DEFAULT FALSE`;
+    await sql`ALTER TABLE records ADD COLUMN IF NOT EXISTS is_ear_clean     BOOLEAN DEFAULT FALSE`;
+    await sql`ALTER TABLE records ADD COLUMN IF NOT EXISTS is_teeth_brush   BOOLEAN DEFAULT FALSE`;
+    await sql`ALTER TABLE records ADD COLUMN IF NOT EXISTS weight           INTEGER DEFAULT NULL`;
   };
   initDB().catch(console.error);
 
@@ -36,7 +42,10 @@ if (process.env.DATABASE_URL) {
     date:             r.date instanceof Date ? r.date.toISOString().slice(0, 10) : String(r.date).slice(0, 10),
     urine_times:      typeof r.urine_times === 'string' ? JSON.parse(r.urine_times) : (r.urine_times || []),
     poop_times:       typeof r.poop_times  === 'string' ? JSON.parse(r.poop_times)  : (r.poop_times  || []),
-    is_litter_change: !!r.is_litter_change
+    is_litter_change: !!r.is_litter_change,
+    is_ear_clean:     !!r.is_ear_clean,
+    is_teeth_brush:   !!r.is_teeth_brush,
+    weight:           r.weight != null ? Number(r.weight) : null
   });
 
   db = {
@@ -51,17 +60,21 @@ if (process.env.DATABASE_URL) {
       const rows = await sql`SELECT * FROM records WHERE date = ${date}`;
       return rows.length ? parseRow(rows[0]) : null;
     },
-    async upsert(date, { urine_times, poop_times, is_hospital, is_litter_change, notes }) {
+    async upsert(date, { urine_times, poop_times, is_hospital, is_litter_change, is_ear_clean, is_teeth_brush, weight, notes }) {
       const ut = JSON.stringify(urine_times);
       const pt = JSON.stringify(poop_times);
+      const w  = (weight != null && weight !== '') ? Number(weight) : null;
       await sql`
-        INSERT INTO records (date, urine_times, poop_times, is_hospital, is_litter_change, notes)
-        VALUES (${date}, ${ut}, ${pt}, ${is_hospital}, ${is_litter_change}, ${notes})
+        INSERT INTO records (date, urine_times, poop_times, is_hospital, is_litter_change, is_ear_clean, is_teeth_brush, weight, notes)
+        VALUES (${date}, ${ut}, ${pt}, ${is_hospital}, ${is_litter_change}, ${is_ear_clean}, ${is_teeth_brush}, ${w}, ${notes})
         ON CONFLICT (date) DO UPDATE SET
           urine_times      = EXCLUDED.urine_times,
           poop_times       = EXCLUDED.poop_times,
           is_hospital      = EXCLUDED.is_hospital,
           is_litter_change = EXCLUDED.is_litter_change,
+          is_ear_clean     = EXCLUDED.is_ear_clean,
+          is_teeth_brush   = EXCLUDED.is_teeth_brush,
+          weight           = EXCLUDED.weight,
           notes            = EXCLUDED.notes
       `;
     },
@@ -91,12 +104,18 @@ if (process.env.DATABASE_URL) {
   try { sqlite.exec("ALTER TABLE records ADD COLUMN urine_times      TEXT NOT NULL DEFAULT '[]'"); } catch(e) {}
   try { sqlite.exec("ALTER TABLE records ADD COLUMN poop_times       TEXT NOT NULL DEFAULT '[]'"); } catch(e) {}
   try { sqlite.exec("ALTER TABLE records ADD COLUMN is_litter_change INTEGER DEFAULT 0");          } catch(e) {}
+  try { sqlite.exec("ALTER TABLE records ADD COLUMN is_ear_clean     INTEGER DEFAULT 0");   } catch(e) {}
+  try { sqlite.exec("ALTER TABLE records ADD COLUMN is_teeth_brush   INTEGER DEFAULT 0");   } catch(e) {}
+  try { sqlite.exec("ALTER TABLE records ADD COLUMN weight           INTEGER DEFAULT NULL"); } catch(e) {}
 
   const parseRow = r => ({
     ...r,
     urine_times:      JSON.parse(r.urine_times || '[]'),
     poop_times:       JSON.parse(r.poop_times  || '[]'),
-    is_litter_change: !!r.is_litter_change
+    is_litter_change: !!r.is_litter_change,
+    is_ear_clean:     !!r.is_ear_clean,
+    is_teeth_brush:   !!r.is_teeth_brush,
+    weight:           r.weight != null ? Number(r.weight) : null
   });
 
   db = {
@@ -108,17 +127,21 @@ if (process.env.DATABASE_URL) {
       const row = sqlite.prepare('SELECT * FROM records WHERE date = ?').get(date);
       return row ? parseRow(row) : null;
     },
-    async upsert(date, { urine_times, poop_times, is_hospital, is_litter_change, notes }) {
+    async upsert(date, { urine_times, poop_times, is_hospital, is_litter_change, is_ear_clean, is_teeth_brush, weight, notes }) {
+      const w = (weight != null && weight !== '') ? Number(weight) : null;
       sqlite.prepare(`
-        INSERT INTO records (date, urine_times, poop_times, is_hospital, is_litter_change, notes)
-        VALUES (?, ?, ?, ?, ?, ?)
+        INSERT INTO records (date, urine_times, poop_times, is_hospital, is_litter_change, is_ear_clean, is_teeth_brush, weight, notes)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
         ON CONFLICT(date) DO UPDATE SET
           urine_times      = excluded.urine_times,
           poop_times       = excluded.poop_times,
           is_hospital      = excluded.is_hospital,
           is_litter_change = excluded.is_litter_change,
+          is_ear_clean     = excluded.is_ear_clean,
+          is_teeth_brush   = excluded.is_teeth_brush,
+          weight           = excluded.weight,
           notes            = excluded.notes
-      `).run(date, JSON.stringify(urine_times), JSON.stringify(poop_times), is_hospital ? 1 : 0, is_litter_change ? 1 : 0, notes);
+      `).run(date, JSON.stringify(urine_times), JSON.stringify(poop_times), is_hospital ? 1 : 0, is_litter_change ? 1 : 0, is_ear_clean ? 1 : 0, is_teeth_brush ? 1 : 0, w, notes);
     },
     async remove(date) {
       sqlite.prepare('DELETE FROM records WHERE date = ?').run(date);
@@ -143,7 +166,7 @@ app.get('/api/records/:year/:month', async (req, res) => {
 app.get('/api/records/:date', async (req, res) => {
   try {
     const record = await db.getOne(req.params.date);
-    res.json(record || { date: req.params.date, urine_times: [], poop_times: [], is_hospital: false, notes: '' });
+    res.json(record || { date: req.params.date, urine_times: [], poop_times: [], is_hospital: false, is_litter_change: false, is_ear_clean: false, is_teeth_brush: false, notes: '' });
   } catch (e) {
     console.error(e);
     res.status(500).json({ error: e.message });
@@ -152,8 +175,8 @@ app.get('/api/records/:date', async (req, res) => {
 
 app.post('/api/records/:date', async (req, res) => {
   try {
-    const { urine_times = [], poop_times = [], is_hospital = false, is_litter_change = false, notes = '' } = req.body;
-    await db.upsert(req.params.date, { urine_times, poop_times, is_hospital, is_litter_change, notes });
+    const { urine_times = [], poop_times = [], is_hospital = false, is_litter_change = false, is_ear_clean = false, is_teeth_brush = false, weight = null, notes = '' } = req.body;
+    await db.upsert(req.params.date, { urine_times, poop_times, is_hospital, is_litter_change, is_ear_clean, is_teeth_brush, weight, notes });
     res.json({ success: true });
   } catch (e) {
     console.error(e);

@@ -1,23 +1,27 @@
 /* ── 기본 설정 ── */
 :root {
-  --bg:           #FFF8F0;
-  --surface:      #FFFFFF;
-  --primary:      #FF8C42;
-  --primary-soft: #FFE0C8;
-  --hospital:     #FF6B6B;
-  --hospital-bg:  #FFF0F0;
-  --litter:       #9B8FD4;
-  --litter-bg:    #F0EDFA;
-  --notes-color:  #E8A020;
-  --notes-bg:     #FFF8EC;
-  --record:       #6BCB77;
-  --record-bg:    #F0FBF1;
-  --today-ring:   #4ECDC4;
-  --text:         #333333;
-  --text-sub:     #888888;
-  --border:       #EEEEEE;
-  --radius:       12px;
-  --shadow:       0 2px 12px rgba(0,0,0,0.08);
+  --bg:              #FFF8F0;
+  --surface:         #FFFFFF;
+  --primary:         #FF8C42;
+  --primary-soft:    #FFE0C8;
+  --hospital:        #FF6B6B;
+  --hospital-bg:     #FFF0F0;
+  --litter:          #9B8FD4;
+  --litter-bg:       #F0EDFA;
+  --ear-clean:       #4AAFE0;
+  --ear-clean-bg:    #EBF7FF;
+  --teeth-brush:     #4DC9A0;
+  --teeth-brush-bg:  #EAFAF5;
+  --notes-color:     #E8A020;
+  --notes-bg:        #FFF8EC;
+  --record:          #6BCB77;
+  --record-bg:       #F0FBF1;
+  --today-ring:      #4ECDC4;
+  --text:            #333333;
+  --text-sub:        #888888;
+  --border:          #EEEEEE;
+  --radius:          12px;
+  --shadow:          0 2px 12px rgba(0,0,0,0.08);
 }
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -120,8 +124,10 @@ main {
 .day-cell:hover { border-color: var(--primary); transform: translateY(-1px); }
 .day-cell.selected { border-color: var(--primary); box-shadow: 0 0 0 2px var(--primary-soft); }
 .day-cell.today { border-color: var(--today-ring); box-shadow: 0 0 0 2px rgba(78,205,196,0.25); }
-.day-cell.hospital-day { background: var(--hospital-bg); border-color: var(--hospital); }
-.day-cell.litter-day  { background: var(--litter-bg);   border-color: var(--litter); }
+.day-cell.hospital-day    { background: var(--hospital-bg);    border-color: var(--hospital); }
+.day-cell.litter-day      { background: var(--litter-bg);      border-color: var(--litter); }
+.day-cell.ear-clean-day   { background: var(--ear-clean-bg);   border-color: var(--ear-clean); }
+.day-cell.teeth-brush-day { background: var(--teeth-brush-bg); border-color: var(--teeth-brush); }
 .day-cell.has-notes   { background: var(--notes-bg);    border-color: var(--notes-color); }
 .day-cell.has-record  { background: var(--record-bg);   border-color: var(--record); }
 .day-cell.empty { background: transparent; border-color: transparent; cursor: default; }
@@ -157,6 +163,8 @@ main {
 }
 .ind-hospital { font-size: 0.85rem; }
 .ind-litter   { font-size: 0.85rem; }
+.ind-ear      { font-size: 0.85rem; }
+.ind-teeth    { font-size: 0.85rem; }
 .ind-notes    { font-size: 0.75rem; }
 .ind-count {
   font-size: 0.7rem;
@@ -175,11 +183,13 @@ main {
 }
 .legend-item { display: flex; align-items: center; gap: 6px; font-size: 0.75rem; color: var(--text-sub); }
 .dot { width: 12px; height: 12px; border-radius: 4px; border: 1.5px solid; }
-.dot.hospital   { background: var(--hospital-bg); border-color: var(--hospital); }
-.dot.litter     { background: var(--litter-bg);   border-color: var(--litter); }
-.dot.has-notes  { background: var(--notes-bg);    border-color: var(--notes-color); }
-.dot.has-record { background: var(--record-bg);   border-color: var(--record); }
-.dot.today      { background: white; border-color: var(--today-ring); box-shadow: 0 0 0 2px rgba(78,205,196,0.25); }
+.dot.hospital     { background: var(--hospital-bg);    border-color: var(--hospital); }
+.dot.litter       { background: var(--litter-bg);      border-color: var(--litter); }
+.dot.ear-clean    { background: var(--ear-clean-bg);   border-color: var(--ear-clean); }
+.dot.teeth-brush  { background: var(--teeth-brush-bg); border-color: var(--teeth-brush); }
+.dot.has-notes    { background: var(--notes-bg);       border-color: var(--notes-color); }
+.dot.has-record   { background: var(--record-bg);      border-color: var(--record); }
+.dot.today        { background: white; border-color: var(--today-ring); box-shadow: 0 0 0 2px rgba(78,205,196,0.25); }
 
 /* ── 상세 패널 ── */
 .detail-section {
@@ -339,6 +349,87 @@ main {
 .litter-toggle input:checked + .toggle-track::after { left: 20px; }
 .litter-toggle .toggle-label { font-size: 0.9rem; font-weight: 600; }
 .toggle-label { font-size: 0.9rem; font-weight: 600; }
+
+/* 귀청소 / 양치 토글 묶음 */
+.care-toggles {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+.care-toggle {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  background: var(--bg);
+  border-radius: 10px;
+  cursor: pointer;
+  user-select: none;
+}
+.care-toggle input { display: none; }
+.care-toggle .toggle-track {
+  width: 36px; height: 20px;
+  border-radius: 10px;
+  background: var(--border);
+  position: relative;
+  flex-shrink: 0;
+  transition: background 0.2s;
+}
+.care-toggle .toggle-track::after {
+  content: '';
+  position: absolute;
+  width: 16px; height: 16px;
+  border-radius: 50%;
+  background: white;
+  top: 2px; left: 2px;
+  transition: left 0.2s;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+}
+.ear-toggle   input:checked + .toggle-track { background: var(--ear-clean); }
+.teeth-toggle input:checked + .toggle-track { background: var(--teeth-brush); }
+.care-toggle  input:checked + .toggle-track::after { left: 18px; }
+.care-toggle .toggle-label { font-size: 0.85rem; font-weight: 600; }
+
+/* 체중 영역 */
+.weight-section {
+  margin-bottom: 16px;
+  background: var(--bg);
+  border-radius: 10px;
+  padding: 12px;
+}
+.weight-label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+.weight-input-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+#weight-input {
+  width: 90px;
+  padding: 8px 12px;
+  border: 1.5px solid var(--border);
+  border-radius: 8px;
+  font-size: 1.1rem;
+  font-weight: 700;
+  text-align: center;
+  color: var(--text);
+  background: var(--surface);
+  outline: none;
+  transition: border-color 0.15s;
+}
+#weight-input:focus { border-color: var(--primary); }
+#weight-input::placeholder { font-size: 0.85rem; font-weight: 400; color: var(--text-sub); }
+.weight-display {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: var(--text-sub);
+  transition: color 0.2s;
+}
+.weight-display.has-weight { color: var(--primary); }
 
 /* 메모 영역 */
 .notes-section { margin-bottom: 16px; }

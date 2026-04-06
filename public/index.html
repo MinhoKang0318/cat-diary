@@ -36,6 +36,8 @@
       <div class="legend">
         <span class="legend-item"><span class="dot hospital"></span>병원일</span>
         <span class="legend-item"><span class="dot litter"></span>모래 갈이</span>
+        <span class="legend-item"><span class="dot ear-clean"></span>귀청소</span>
+        <span class="legend-item"><span class="dot teeth-brush"></span>양치</span>
         <span class="legend-item"><span class="dot has-notes"></span>메모 있음</span>
         <span class="legend-item"><span class="dot has-record"></span>기록 있음</span>
         <span class="legend-item"><span class="dot today"></span>오늘</span>
@@ -89,6 +91,29 @@
           <span class="toggle-track"></span>
           <span class="toggle-label">🧹 모래 전체 갈이</span>
         </label>
+
+        <!-- 귀청소 / 양치 -->
+        <div class="care-toggles">
+          <label class="care-toggle ear-toggle">
+            <input type="checkbox" id="ear-clean-check" />
+            <span class="toggle-track"></span>
+            <span class="toggle-label">👂 귀청소</span>
+          </label>
+          <label class="care-toggle teeth-toggle">
+            <input type="checkbox" id="teeth-brush-check" />
+            <span class="toggle-track"></span>
+            <span class="toggle-label">🪥 양치</span>
+          </label>
+        </div>
+
+        <!-- 체중 -->
+        <div class="weight-section">
+          <div class="weight-label">⚖️ 체중</div>
+          <div class="weight-input-row">
+            <input type="text" id="weight-input" inputmode="numeric" pattern="[0-9]*" maxlength="4" placeholder="예) 85" autocomplete="off" />
+            <span class="weight-display" id="weight-display">— kg</span>
+          </div>
+        </div>
 
         <!-- 이슈 / 메모 -->
         <div class="notes-section">

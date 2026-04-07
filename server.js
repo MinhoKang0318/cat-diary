@@ -78,6 +78,13 @@ if (process.env.DATABASE_URL) {
           notes            = EXCLUDED.notes
       `;
     },
+    async getRange(from, to) {
+      const rows = await sql`SELECT date, weight FROM records WHERE date >= ${from} AND date <= ${to} AND weight IS NOT NULL ORDER BY date`;
+      return rows.map(r => ({
+        date:   r.date instanceof Date ? r.date.toISOString().slice(0, 10) : String(r.date).slice(0, 10),
+        weight: Number(r.weight)
+      }));
+    },
     async remove(date) {
       await sql`DELETE FROM records WHERE date = ${date}`;
     }
@@ -143,6 +150,11 @@ if (process.env.DATABASE_URL) {
           notes            = excluded.notes
       `).run(date, JSON.stringify(urine_times), JSON.stringify(poop_times), is_hospital ? 1 : 0, is_litter_change ? 1 : 0, is_ear_clean ? 1 : 0, is_teeth_brush ? 1 : 0, w, notes);
     },
+    async getRange(from, to) {
+      return sqlite.prepare(
+        'SELECT date, weight FROM records WHERE date >= ? AND date <= ? AND weight IS NOT NULL ORDER BY date'
+      ).all(from, to).map(r => ({ date: r.date, weight: r.weight }));
+    },
     async remove(date) {
       sqlite.prepare('DELETE FROM records WHERE date = ?').run(date);
     }
@@ -178,6 +190,18 @@ app.post('/api/records/:date', async (req, res) => {
     const { urine_times = [], poop_times = [], is_hospital = false, is_litter_change = false, is_ear_clean = false, is_teeth_brush = false, weight = null, notes = '' } = req.body;
     await db.upsert(req.params.date, { urine_times, poop_times, is_hospital, is_litter_change, is_ear_clean, is_teeth_brush, weight, notes });
     res.json({ success: true });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.get('/api/weights', async (req, res) => {
+  try {
+    const { from, to } = req.query;
+    if (!from || !to) return res.status(400).json({ error: 'from, to 파라미터 필요' });
+    const data = await db.getRange(from, to);
+    res.json(data);
   } catch (e) {
     console.error(e);
     res.status(500).json({ error: e.message });

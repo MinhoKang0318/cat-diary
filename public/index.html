@@ -3,17 +3,19 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>🐱 고양이 건강 다이어리</title>
+  <title>🐱 코나의 건강 다이어리</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🐱</text></svg>">
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
 
   <header>
-    <h1>🐱 고양이 건강 다이어리</h1>
+    <h1>🐱 코나의 건강 다이어리</h1>
+    <p class="kona-age" id="kona-age"></p>
   </header>
 
   <main>
+  <div class="main-row">
     <!-- 달력 영역 -->
     <section class="calendar-section">
       <div class="calendar-nav">
@@ -34,6 +36,8 @@
       <div class="calendar-days" id="calendar-days"></div>
 
       <div class="legend">
+        <span class="legend-item"><span class="dot birthday"></span>🎂 생일</span>
+        <span class="legend-item"><span class="dot home-day"></span>🏠 입양일</span>
         <span class="legend-item"><span class="dot hospital"></span>병원일</span>
         <span class="legend-item"><span class="dot litter"></span>모래 갈이</span>
         <span class="legend-item"><span class="dot ear-clean"></span>귀청소</span>
@@ -135,6 +139,26 @@
         </div>
       </div>
     </section>
+  </div><!-- /.main-row -->
+
+  <!-- 체중 그래프 -->
+  <section class="weight-chart-section" id="weight-chart-section">
+    <div class="chart-header">
+      <h3 class="chart-title">⚖️ 체중 변화</h3>
+      <div class="chart-periods">
+        <button class="period-btn" data-days="14">14일</button>
+        <button class="period-btn active" data-days="30">30일</button>
+        <button class="period-btn" data-days="60">60일</button>
+        <button class="period-btn" data-days="90">90일</button>
+      </div>
+    </div>
+    <div class="chart-wrap" id="chart-wrap">
+      <svg id="weight-svg" height="200"></svg>
+      <div class="chart-tooltip" id="chart-tooltip"></div>
+      <div class="chart-empty" id="chart-empty">체중 기록이 없어요 🐱</div>
+    </div>
+  </section>
+
   </main>
 
   <!-- 모바일용 오버레이 -->

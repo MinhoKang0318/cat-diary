@@ -9,7 +9,8 @@ const state = {
 // ── 월별 클라이언트 캐시 ───────────────────────────────────
 const monthCache = {};  // { 'YYYY-M': monthRecords 객체 }
 
-const today = new Date().toISOString().slice(0, 10);
+const _now  = new Date();
+const today = `${_now.getFullYear()}-${String(_now.getMonth()+1).padStart(2,'0')}-${String(_now.getDate()).padStart(2,'0')}`;
 
 // ── 달력 로드 (캐시 우선) ─────────────────────────────────
 async function loadMonth() {
@@ -63,14 +64,18 @@ function buildDayCell(d, dateStr) {
   cell.className = 'day-cell';
   cell.dataset.date = dateStr;
 
-  const uCount   = r?.urine_times?.length || 0;
-  const pCount   = r?.poop_times?.length  || 0;
-  const hasNotes = !!r?.notes?.trim();
+  const uCount      = r?.urine_times?.length || 0;
+  const pCount      = r?.poop_times?.length  || 0;
+  const hasNotes    = !!r?.notes?.trim();
+  const isBirthday  = state.month === 10 && d === 27;
+  const isHomeDay   = state.month ===  1 && d ===  7;
 
-  if (r?.is_hospital)                        cell.classList.add('hospital-day');
+  if (isBirthday)                            cell.classList.add('birthday-day');
+  else if (isHomeDay)                        cell.classList.add('home-day');
+  else if (r?.is_hospital)                   cell.classList.add('hospital-day');
   else if (r?.is_litter_change)              cell.classList.add('litter-day');
   else if (r?.is_ear_clean)                  cell.classList.add('ear-clean-day');
-  else if (r?.is_teeth_brush)               cell.classList.add('teeth-brush-day');
+  else if (r?.is_teeth_brush)                cell.classList.add('teeth-brush-day');
   else if (hasNotes)                         cell.classList.add('has-notes');
   else if (r && (uCount > 0 || pCount > 0)) cell.classList.add('has-record');
   if (dateStr === today)              cell.classList.add('today');
@@ -83,11 +88,13 @@ function buildDayCell(d, dateStr) {
 
   const inds = document.createElement('div');
   inds.className = 'day-indicators';
+  if (isBirthday)          inds.innerHTML += `<span class="ind-birthday">🎂</span>`;
+  if (isHomeDay)           inds.innerHTML += `<span class="ind-home">🏠</span>`;
   if (r?.is_hospital)      inds.innerHTML += `<span class="ind-hospital">🏥</span>`;
   if (r?.is_litter_change) inds.innerHTML += `<span class="ind-litter">🧹</span>`;
   if (r?.is_ear_clean)     inds.innerHTML += `<span class="ind-ear">👂</span>`;
   if (r?.is_teeth_brush)   inds.innerHTML += `<span class="ind-teeth">🪥</span>`;
-  if (uCount > 0)          inds.innerHTML += `<span class="ind-count">💧${uCount}</span>`;
+  if (uCount > 0)          inds.innerHTML += `<span class="ind-count">💧${uCount}${uCount >= 3 ? '⭐' : ''}</span>`;
   if (pCount > 0)          inds.innerHTML += `<span class="ind-count">💩${pCount}</span>`;
   if (hasNotes)            inds.innerHTML += `<span class="ind-notes">📝</span>`;
   cell.appendChild(inds);
@@ -216,7 +223,7 @@ function saveRecord() {
     method:  'POST',
     headers: { 'Content-Type': 'application/json' },
     body:    JSON.stringify(payload)
-  }).catch(e => {
+  }).then(() => loadWeightChart()).catch(e => {
     console.error('저장 실패:', e);
     statusEl.textContent = '⚠️ 저장 실패';
   });
@@ -308,5 +315,190 @@ function formatTime(iso) {
   return `${ampm} ${h12}:${min}`;
 }
 
+// ── 체중 그래프 ───────────────────────────────────────────
+const chartState = { days: 30, data: [] };
+
+async function loadWeightChart() {
+  const toDate   = new Date();
+  const fromDate = new Date();
+  fromDate.setDate(fromDate.getDate() - chartState.days + 1);
+
+  const from = formatDate(fromDate.getFullYear(), fromDate.getMonth() + 1, fromDate.getDate());
+  const to   = formatDate(toDate.getFullYear(),   toDate.getMonth() + 1,   toDate.getDate());
+
+  try {
+    const res = await fetch(`/api/weights?from=${from}&to=${to}`);
+    chartState.data = await res.json();
+  } catch (e) {
+    chartState.data = [];
+    console.error('체중 데이터 로드 실패:', e);
+  }
+  drawWeightChart();
+}
+
+function drawWeightChart() {
+  const svg     = document.getElementById('weight-svg');
+  const emptyEl = document.getElementById('chart-empty');
+  const wrap    = document.getElementById('chart-wrap');
+
+  const W = wrap.getBoundingClientRect().width;
+  if (!W) return;
+
+  const H   = 200;
+  const PAD = { t: 16, r: 16, b: 36, l: 48 };
+  const cW  = W - PAD.l - PAD.r;
+  const cH  = H - PAD.t - PAD.b;
+
+  svg.setAttribute('width',   W);
+  svg.setAttribute('height',  H);
+  svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+
+  const data = chartState.data;
+  if (data.length === 0) {
+    svg.innerHTML = '';
+    emptyEl.style.display = 'flex';
+    return;
+  }
+  emptyEl.style.display = 'none';
+
+  const pts = data.map(d => ({ date: d.date, kg: d.weight / 10 }));
+
+  // Y 범위 — 데이터 기준으로 여유 있게
+  const kgs    = pts.map(p => p.kg);
+  const dMin   = Math.min(...kgs);
+  const dMax   = Math.max(...kgs);
+  const spread = Math.max(dMax - dMin, 0.5);
+  const yPad   = Math.max(spread * 0.4, 0.5);
+  const yMin   = Math.floor((dMin - yPad) * 2) / 2;
+  const yMax   = Math.ceil( (dMax + yPad) * 2) / 2;
+  const yRange = yMax - yMin;
+
+  // X 범위 — 선택한 전체 기간
+  const toDate2   = new Date();
+  const fromDate2 = new Date();
+  fromDate2.setDate(fromDate2.getDate() - chartState.days + 1);
+  const span = chartState.days - 1 || 1;
+
+  const xOf = dateStr => {
+    const d = new Date(dateStr + 'T00:00:00');
+    return PAD.l + (Math.round((d - fromDate2) / 86400000) / span) * cW;
+  };
+  const yOf = kg => PAD.t + cH - ((kg - yMin) / yRange) * cH;
+
+  let html = `<defs>
+    <linearGradient id="wg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%"   stop-color="#FF8C42" stop-opacity="0.35"/>
+      <stop offset="100%" stop-color="#FF8C42" stop-opacity="0.02"/>
+    </linearGradient>
+  </defs>`;
+
+  // 수평 그리드 + Y 레이블
+  const yStep = yRange <= 2.5 ? 0.5 : 1;
+  for (let y = yMin; y <= yMax + 0.01; y += yStep) {
+    const py = Math.round(yOf(y));
+    html += `<line x1="${PAD.l}" y1="${py}" x2="${W - PAD.r}" y2="${py}" stroke="#EEEEEE" stroke-width="1"/>`;
+    html += `<text x="${PAD.l - 6}" y="${py + 4}" text-anchor="end" font-size="11" fill="#AAAAAA">${y.toFixed(1)}</text>`;
+  }
+
+  // X 레이블
+  const xInterval = chartState.days <= 30 ? 7 : chartState.days <= 60 ? 14 : 30;
+  for (let i = 0; i <= span; i += xInterval) {
+    const d = new Date(fromDate2);
+    d.setDate(d.getDate() + i);
+    const px    = Math.round(PAD.l + (i / span) * cW);
+    const label = `${d.getMonth() + 1}/${d.getDate()}`;
+    html += `<text x="${px}" y="${H - 6}" text-anchor="middle" font-size="11" fill="#AAAAAA">${label}</text>`;
+  }
+
+  // 경로 생성
+  let linePath = '';
+  pts.forEach((p, i) => {
+    const px = xOf(p.date);
+    const py = yOf(p.kg);
+    linePath += i === 0 ? `M ${px} ${py}` : ` L ${px} ${py}`;
+  });
+
+  // 채우기 영역
+  if (pts.length >= 1) {
+    const fX = xOf(pts[0].date);
+    const lX = xOf(pts[pts.length - 1].date);
+    html += `<path d="${linePath} L ${lX} ${PAD.t + cH} L ${fX} ${PAD.t + cH} Z" fill="url(#wg)"/>`;
+  }
+
+  // 선
+  if (pts.length >= 2) {
+    html += `<path d="${linePath}" fill="none" stroke="#FF8C42" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>`;
+  }
+
+  // 점
+  pts.forEach(p => {
+    const px = xOf(p.date);
+    const py = yOf(p.kg);
+    html += `<circle cx="${px}" cy="${py}" r="5" fill="#FF8C42" stroke="white" stroke-width="2.5" `
+          + `class="w-dot" data-date="${p.date}" data-kg="${p.kg}" style="cursor:pointer"/>`;
+  });
+
+  svg.innerHTML = html;
+
+  // 툴팁
+  const tooltip = document.getElementById('chart-tooltip');
+  svg.querySelectorAll('.w-dot').forEach(dot => {
+    dot.addEventListener('mouseenter', () => {
+      const [, m, d] = dot.dataset.date.split('-');
+      tooltip.textContent = `${+m}/${+d} · ${Number(dot.dataset.kg).toFixed(1)} kg`;
+      tooltip.style.display = 'block';
+    });
+    dot.addEventListener('mousemove', e => {
+      const rect = wrap.getBoundingClientRect();
+      tooltip.style.left = (e.clientX - rect.left + 14) + 'px';
+      tooltip.style.top  = (e.clientY - rect.top  - 40) + 'px';
+    });
+    dot.addEventListener('mouseleave', () => {
+      tooltip.style.display = 'none';
+    });
+  });
+}
+
+// 기간 버튼
+document.querySelectorAll('.period-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.period-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    chartState.days = Number(btn.dataset.days);
+    loadWeightChart();
+  });
+});
+
+// 리사이즈 시 재렌더
+let _chartResizeTimer;
+window.addEventListener('resize', () => {
+  clearTimeout(_chartResizeTimer);
+  _chartResizeTimer = setTimeout(drawWeightChart, 200);
+});
+
+// ── 코나 나이 표시 ────────────────────────────────────────
+function displayKonaAge() {
+  const birth = new Date(2017, 9, 27); // 2017-10-27
+  const now   = new Date();
+
+  let years  = now.getFullYear() - birth.getFullYear();
+  let months = now.getMonth()    - birth.getMonth();
+  let days   = now.getDate()     - birth.getDate();
+
+  if (days < 0) {
+    months--;
+    days += new Date(now.getFullYear(), now.getMonth(), 0).getDate();
+  }
+  if (months < 0) {
+    years--;
+    months += 12;
+  }
+
+  document.getElementById('kona-age').textContent =
+    `🐾 세상에 온 지 ${years}년 ${months}개월 ${days}일째다냥~`;
+}
+
 // ── 초기화 ────────────────────────────────────────────────
+displayKonaAge();
 loadMonth();
+loadWeightChart();

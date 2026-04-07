@@ -12,6 +12,10 @@
   --ear-clean-bg:    #EBF7FF;
   --teeth-brush:     #4DC9A0;
   --teeth-brush-bg:  #EAFAF5;
+  --birthday:        #F59E0B;
+  --birthday-bg:     #FFFBEB;
+  --home:            #EC4899;
+  --home-bg:         #FDF2F8;
   --notes-color:     #E8A020;
   --notes-bg:        #FFF8EC;
   --record:          #6BCB77;
@@ -38,18 +42,31 @@ header {
   background: var(--primary);
   color: white;
   text-align: center;
-  padding: 16px 20px;
+  padding: 14px 20px;
   box-shadow: 0 2px 8px rgba(255,140,66,0.3);
 }
 header h1 { font-size: 1.3rem; font-weight: 700; letter-spacing: -0.3px; }
+.kona-age {
+  margin-top: 5px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  opacity: 0.88;
+  letter-spacing: 0.3px;
+}
 
 /* ── 레이아웃 ── */
 main {
   display: flex;
+  flex-direction: column;
   gap: 20px;
   max-width: 1100px;
   margin: 24px auto;
   padding: 0 16px;
+}
+
+.main-row {
+  display: flex;
+  gap: 20px;
   align-items: flex-start;
 }
 
@@ -124,6 +141,8 @@ main {
 .day-cell:hover { border-color: var(--primary); transform: translateY(-1px); }
 .day-cell.selected { border-color: var(--primary); box-shadow: 0 0 0 2px var(--primary-soft); }
 .day-cell.today { border-color: var(--today-ring); box-shadow: 0 0 0 2px rgba(78,205,196,0.25); }
+.day-cell.birthday-day    { background: var(--birthday-bg);    border-color: var(--birthday); box-shadow: 0 0 0 2px rgba(245,158,11,0.2); }
+.day-cell.home-day        { background: var(--home-bg);        border-color: var(--home);     box-shadow: 0 0 0 2px rgba(236,72,153,0.2); }
 .day-cell.hospital-day    { background: var(--hospital-bg);    border-color: var(--hospital); }
 .day-cell.litter-day      { background: var(--litter-bg);      border-color: var(--litter); }
 .day-cell.ear-clean-day   { background: var(--ear-clean-bg);   border-color: var(--ear-clean); }
@@ -161,6 +180,8 @@ main {
   gap: 2px;
   flex: 1;
 }
+.ind-birthday { font-size: 0.9rem; }
+.ind-home     { font-size: 0.9rem; }
 .ind-hospital { font-size: 0.85rem; }
 .ind-litter   { font-size: 0.85rem; }
 .ind-ear      { font-size: 0.85rem; }
@@ -183,6 +204,8 @@ main {
 }
 .legend-item { display: flex; align-items: center; gap: 6px; font-size: 0.75rem; color: var(--text-sub); }
 .dot { width: 12px; height: 12px; border-radius: 4px; border: 1.5px solid; }
+.dot.birthday     { background: var(--birthday-bg);    border-color: var(--birthday); }
+.dot.home-day     { background: var(--home-bg);        border-color: var(--home); }
 .dot.hospital     { background: var(--hospital-bg);    border-color: var(--hospital); }
 .dot.litter       { background: var(--litter-bg);      border-color: var(--litter); }
 .dot.ear-clean    { background: var(--ear-clean-bg);   border-color: var(--ear-clean); }
@@ -491,12 +514,83 @@ textarea#notes-input:focus { border-color: var(--primary); background: white; }
 }
 .overlay.visible { display: block; }
 
+/* ── 체중 그래프 ── */
+.weight-chart-section {
+  background: var(--surface);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 20px;
+}
+
+.chart-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.chart-title {
+  font-size: 1rem;
+  font-weight: 700;
+}
+.chart-periods {
+  display: flex;
+  gap: 6px;
+}
+.period-btn {
+  padding: 5px 14px;
+  border-radius: 20px;
+  border: 1.5px solid var(--border);
+  background: var(--surface);
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  color: var(--text-sub);
+  transition: all 0.15s;
+}
+.period-btn:hover  { border-color: var(--primary); color: var(--primary); }
+.period-btn.active { background: var(--primary); border-color: var(--primary); color: white; }
+
+.chart-wrap {
+  position: relative;
+  width: 100%;
+  min-height: 200px;
+}
+.chart-wrap svg { display: block; overflow: visible; }
+
+.chart-empty {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  height: 200px;
+  font-size: 0.9rem;
+  color: var(--text-sub);
+}
+
+.chart-tooltip {
+  display: none;
+  position: absolute;
+  background: rgba(51, 51, 51, 0.88);
+  color: white;
+  font-size: 0.82rem;
+  font-weight: 600;
+  padding: 5px 10px;
+  border-radius: 6px;
+  pointer-events: none;
+  white-space: nowrap;
+  z-index: 10;
+}
+
 /* ── 반응형: 모바일 ── */
 @media (max-width: 720px) {
   main {
-    flex-direction: column;
     margin: 12px auto;
     gap: 12px;
+  }
+  .main-row {
+    flex-direction: column;
+    gap: 0;
   }
 
   .detail-section {
@@ -524,4 +618,5 @@ textarea#notes-input:focus { border-color: var(--primary); background: white; }
   .ind-hospital { font-size: 0.75rem; }
 
   header h1 { font-size: 1.1rem; }
+  .kona-age { font-size: 0.8rem; }
 }

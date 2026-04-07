@@ -477,25 +477,27 @@ window.addEventListener('resize', () => {
 });
 
 // ── 코나 나이 표시 ────────────────────────────────────────
-function displayKonaAge() {
-  const birth = new Date(2017, 9, 27); // 2017-10-27
-  const now   = new Date();
-
-  let years  = now.getFullYear() - birth.getFullYear();
-  let months = now.getMonth()    - birth.getMonth();
-  let days   = now.getDate()     - birth.getDate();
-
+function calcElapsed(fromDate) {
+  const now = new Date();
+  let years  = now.getFullYear() - fromDate.getFullYear();
+  let months = now.getMonth()    - fromDate.getMonth();
+  let days   = now.getDate()     - fromDate.getDate();
   if (days < 0) {
     months--;
     days += new Date(now.getFullYear(), now.getMonth(), 0).getDate();
   }
-  if (months < 0) {
-    years--;
-    months += 12;
-  }
+  if (months < 0) { years--; months += 12; }
+  return { years, months, days };
+}
 
+function displayKonaAge() {
+  const { years, months, days } = calcElapsed(new Date(2017, 9, 27));
   document.getElementById('kona-age').textContent =
     `🐾 세상에 온 지 ${years}년 ${months}개월 ${days}일째다냥~`;
+
+  const h = calcElapsed(new Date(2018, 0, 7));
+  document.getElementById('kona-home').textContent =
+    `🏠 우리집에 온 지 ${h.years}년 ${h.months}개월 ${h.days}일째다냥~`;
 }
 
 // ── 초기화 ────────────────────────────────────────────────

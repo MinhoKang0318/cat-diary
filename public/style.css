@@ -433,7 +433,7 @@ main {
   gap: 12px;
 }
 #weight-input {
-  width: 90px;
+  width: 140px;
   padding: 8px 12px;
   border: 1.5px solid var(--border);
   border-radius: 8px;

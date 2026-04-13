@@ -145,8 +145,7 @@ function renderDetail() {
   document.getElementById('ear-clean-check').checked     = r.is_ear_clean;
   document.getElementById('teeth-brush-check').checked   = r.is_teeth_brush;
   const weightInput = document.getElementById('weight-input');
-  weightInput.value = r.weight != null ? String(r.weight) : '';
-  updateWeightDisplay(r.weight);
+  weightInput.value = r.weight != null ? (r.weight / 10).toFixed(1) : '';
   document.getElementById('notes-input').value           = r.notes;
   document.getElementById('save-status').textContent = '';
 
@@ -215,8 +214,12 @@ function saveRecord() {
   renderCalendar();
 
   const statusEl = document.getElementById('save-status');
-  statusEl.textContent = '✓ 저장됨';
-  setTimeout(() => { statusEl.textContent = ''; }, 2000);
+  if (window.matchMedia('(pointer: coarse)').matches) {
+    closePanel();
+  } else {
+    statusEl.textContent = '✓ 저장됨';
+    setTimeout(() => { statusEl.textContent = ''; }, 2000);
+  }
 
   // 백그라운드에서 서버에 저장
   fetch(`/api/records/${state.selectedDate}`, {
@@ -285,20 +288,8 @@ function parseWeightInput(raw) {
   return Number(digits);
 }
 
-function updateWeightDisplay(rawVal) {
-  const el = document.getElementById('weight-display');
-  if (rawVal == null || rawVal === '') {
-    el.textContent = '— kg';
-    el.classList.remove('has-weight');
-  } else {
-    el.textContent = (Number(rawVal) / 10).toFixed(1) + ' kg';
-    el.classList.add('has-weight');
-  }
-}
-
 document.getElementById('weight-input').addEventListener('input', e => {
   e.target.value = e.target.value.replace(/\D/g, '');
-  updateWeightDisplay(parseWeightInput(e.target.value));
 });
 
 // ── 유틸 ──────────────────────────────────────────────────
